@@ -172,8 +172,8 @@ function bindEvents() {
     const id = payload.id;
 
     try {
-      await api(`/api/tools/${id}`, {
-        method: "PATCH",
+      await api(`/api/tools/${id}/update`, {
+        method: "POST",
         headers: {
           "content-type": "application/json",
           "x-admin-token": state.adminToken,

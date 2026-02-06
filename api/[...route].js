@@ -41,6 +41,11 @@ export default async function handler(req, res) {
       return handleToolUpdate(req, res, segments[1]);
     }
 
+    if (segments.length === 3 && segments[0] === "tools" && segments[2] === "update" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleToolUpdate(req, res, segments[1]);
+    }
+
     if (segments.length === 3 && segments[0] === "tools" && segments[2] === "vote" && method === "POST") {
       return handleVote(res, segments[1]);
     }
