@@ -114,7 +114,8 @@ button {
 
 .hero,
 .assistant,
-.admin {
+.admin,
+.status {
   padding: 20px;
 }
 
@@ -134,7 +135,8 @@ button {
 }
 
 .hero p,
-.assistant p {
+.assistant p,
+.status p {
   color: var(--muted);
   margin: 0 0 14px;
   max-width: 68ch;

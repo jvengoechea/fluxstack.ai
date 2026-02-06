@@ -45,6 +45,11 @@ export default async function handler(req, res) {
       return handleToolUpdateByPayload(req, res);
     }
 
+    if (segments.length === 1 && segments[0] === "tool-delete" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleToolDeleteByPayload(req, res);
+    }
+
     if (segments.length === 1 && segments[0] === "submission-approve" && method === "POST") {
       if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
       return handleSubmissionApproveByPayload(req, res);
@@ -203,6 +208,19 @@ async function handleToolUpdateByPayload(req, res) {
   const id = String(payload.id || "").trim();
   if (!id) return sendJSON(res, 400, { error: "Tool id is required" });
   return handleToolUpdate({ ...req, body: payload }, res, id);
+}
+
+async function handleToolDeleteByPayload(req, res) {
+  const payload = await parseBody(req);
+  const id = String(payload.id || "").trim();
+  if (!id) return sendJSON(res, 400, { error: "Tool id is required" });
+
+  const deleted = await query("delete from tools where id = $1 returning id", [id]);
+  if (!deleted.rows.length) {
+    return sendJSON(res, 404, { error: "Tool not found" });
+  }
+
+  return sendJSON(res, 200, { ok: true, id });
 }
 
 async function handleToolEnrich(req, res) {

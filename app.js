@@ -11,8 +11,6 @@ const categoryFilters = document.getElementById("categoryFilters");
 const searchInput = document.getElementById("searchInput");
 const clearSearch = document.getElementById("clearSearch");
 const resultCount = document.getElementById("resultCount");
-const assistantInput = document.getElementById("assistantInput");
-const askAssistant = document.getElementById("askAssistant");
 const assistantOutput = document.getElementById("assistantOutput");
 const openSubmit = document.getElementById("openSubmit");
 const adminLogin = document.getElementById("adminLogin");
@@ -37,7 +35,7 @@ const toolDetailContent = document.getElementById("toolDetailContent");
 
 init().catch((error) => {
   console.error(error);
-  assistantOutput.textContent = "AI Guide: Coming Soon.";
+  assistantOutput.textContent = "Search is available. Some features may be temporarily unavailable.";
 });
 
 async function init() {
@@ -64,14 +62,6 @@ function bindEvents() {
     searchInput.value = "";
     state.query = "";
     await refreshTools();
-  });
-
-  askAssistant.addEventListener("click", handleAssistant);
-  assistantInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      handleAssistant();
-    }
   });
 
   openSubmit.addEventListener("click", () => {
@@ -343,7 +333,7 @@ function renderTools() {
 function openToolDetail(tool) {
   const mediaBlock = buildMediaBlock(tool);
   const adminActions = state.adminToken
-    ? `<button class="ghost" id="editToolFromDetail">Edit Tool</button>`
+    ? `<button class="ghost" id="editToolFromDetail">Edit Tool</button><button class="ghost" id="deleteToolFromDetail">Delete Tool</button>`
     : "";
 
   toolDetailContent.innerHTML = `
@@ -374,6 +364,30 @@ function openToolDetail(tool) {
       openEditToolDialog(tool);
     });
   }
+
+  const deleteBtn = toolDetailContent.querySelector("#deleteToolFromDetail");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", async () => {
+      const confirmed = window.confirm(`Delete ${tool.name}? This cannot be undone.`);
+      if (!confirmed) return;
+
+      try {
+        await api("/api/tool-delete", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-admin-token": state.adminToken,
+          },
+          body: JSON.stringify({ id: tool.id }),
+        });
+        closeModal(toolDetailDialog);
+        assistantOutput.textContent = `${tool.name} deleted.`;
+        await refreshTools();
+      } catch (error) {
+        assistantOutput.textContent = error.message;
+      }
+    });
+  }
   openModal(toolDetailDialog);
 }
 
@@ -402,38 +416,6 @@ function buildMediaBlock(tool) {
   }
 
   return `<div class="media-empty">No preview media available for this tool yet.</div>`;
-}
-
-async function handleAssistant() {
-  const userQuery = assistantInput.value.trim();
-
-  if (!userQuery) {
-    assistantOutput.textContent = "Tell me your use case and I will suggest tools from this library.";
-    return;
-  }
-
-  try {
-    const data = await api(`/api/assistant?q=${encodeURIComponent(userQuery)}`);
-
-    if (!data.recommendations.length) {
-      assistantOutput.textContent = "No direct match found. Try a more specific request.";
-      return;
-    }
-
-    assistantOutput.innerHTML = `${data.intro}<br><br>${data.recommendations
-      .map((tool, idx) => `${idx + 1}. <strong>${escapeHTML(tool.name)}</strong> - ${escapeHTML(tool.description)}`)
-      .join("<br>")}`;
-
-    searchInput.value = userQuery;
-    state.query = userQuery;
-    if (data.inferredCategory) {
-      state.activeCategory = data.inferredCategory;
-    }
-    await refreshTools();
-  } catch (error) {
-    console.error(error);
-    assistantOutput.textContent = "AI Guide: Coming Soon.";
-  }
 }
 
 async function renderPending() {
