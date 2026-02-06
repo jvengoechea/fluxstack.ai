@@ -77,13 +77,19 @@ function bindEvents() {
   });
 
   toggleAdmin.addEventListener("click", async () => {
-    adminPanel.classList.toggle("hidden");
-    toggleAdmin.textContent = adminPanel.classList.contains("hidden") ? "Admin Queue" : "Close Admin";
-
     if (!adminPanel.classList.contains("hidden")) {
-      ensureAdminToken();
-      await renderPending();
+      closeAdminPanel();
+      return;
     }
+
+    const hasAccess = await ensureAdminAccess();
+    if (!hasAccess) {
+      closeAdminPanel();
+      return;
+    }
+
+    openAdminPanel();
+    await renderPending();
   });
 }
 
@@ -231,16 +237,67 @@ async function renderPending() {
       pendingList.appendChild(container);
     });
   } catch (error) {
+    if (error.message === "Admin token required") {
+      clearAdminToken();
+      closeAdminPanel();
+      assistantOutput.textContent = "Admin access denied. Reopen Admin Queue and enter a valid token.";
+      return;
+    }
     pendingList.innerHTML = `<p>${escapeHTML(error.message)}</p>`;
   }
 }
 
-function ensureAdminToken() {
-  if (state.adminToken) return;
+async function ensureAdminAccess() {
+  if (state.adminToken) {
+    const valid = await validateAdminToken(state.adminToken);
+    if (valid) return true;
+    clearAdminToken();
+  }
+
   const token = window.prompt("Enter admin token");
-  if (!token) return;
-  state.adminToken = token.trim();
+  if (!token || !token.trim()) return false;
+
+  const candidate = token.trim();
+  const valid = await validateAdminToken(candidate);
+  if (!valid) {
+    window.alert("Invalid admin token.");
+    return false;
+  }
+
+  state.adminToken = candidate;
   sessionStorage.setItem("fluxstack.adminToken", state.adminToken);
+  return true;
+}
+
+async function validateAdminToken(token) {
+  const response = await fetch("/api/submissions", {
+    headers: { "x-admin-token": token },
+  });
+
+  if (response.status === 401) {
+    return false;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Could not verify admin access (${response.status})`);
+  }
+
+  return true;
+}
+
+function clearAdminToken() {
+  state.adminToken = "";
+  sessionStorage.removeItem("fluxstack.adminToken");
+}
+
+function openAdminPanel() {
+  adminPanel.classList.remove("hidden");
+  toggleAdmin.textContent = "Close Admin";
+}
+
+function closeAdminPanel() {
+  adminPanel.classList.add("hidden");
+  toggleAdmin.textContent = "Admin Queue";
 }
 
 async function api(url, options = {}) {
