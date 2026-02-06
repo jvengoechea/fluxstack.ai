@@ -474,7 +474,7 @@ function enableAdminActions() {
 }
 
 function disableAdminActions() {
-  openAdminAdd.classList.add("hidden");
+  openAdminAdd.classList.remove("hidden");
 }
 
 function openAdminPanel() {
