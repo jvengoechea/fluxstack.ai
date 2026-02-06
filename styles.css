@@ -449,6 +449,11 @@ dialog::backdrop {
   gap: 12px;
 }
 
+.detail-head-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .detail-head h3 {
   margin: 6px 0 0;
   font-size: 1.45rem;

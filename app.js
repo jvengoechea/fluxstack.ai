@@ -28,6 +28,10 @@ const closeAdminAdd = document.getElementById("closeAdminAdd");
 const adminAddDialog = document.getElementById("adminAddDialog");
 const adminAddForm = document.getElementById("adminAddForm");
 const autoFillAdmin = document.getElementById("autoFillAdmin");
+const editToolDialog = document.getElementById("editToolDialog");
+const editToolForm = document.getElementById("editToolForm");
+const closeEditTool = document.getElementById("closeEditTool");
+const autoFillEdit = document.getElementById("autoFillEdit");
 const toolDetailDialog = document.getElementById("toolDetailDialog");
 const toolDetailContent = document.getElementById("toolDetailContent");
 
@@ -158,6 +162,35 @@ function bindEvents() {
 
   autoFillAdmin.addEventListener("click", async () => {
     await runAutoFill(adminAddForm, autoFillAdmin);
+  });
+
+  closeEditTool.addEventListener("click", () => closeModal(editToolDialog));
+
+  editToolForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(editToolForm).entries());
+    const id = payload.id;
+
+    try {
+      await api(`/api/tools/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          "x-admin-token": state.adminToken,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      closeModal(editToolDialog);
+      assistantOutput.textContent = `${payload.name} updated successfully.`;
+      await refreshTools();
+    } catch (error) {
+      assistantOutput.textContent = error.message;
+    }
+  });
+
+  autoFillEdit.addEventListener("click", async () => {
+    await runAutoFill(editToolForm, autoFillEdit);
   });
 
   toolDetailDialog.addEventListener("click", (event) => {
@@ -305,6 +338,9 @@ function renderTools() {
 
 function openToolDetail(tool) {
   const mediaBlock = buildMediaBlock(tool);
+  const adminActions = state.adminToken
+    ? `<button class="ghost" id="editToolFromDetail">Edit Tool</button>`
+    : "";
 
   toolDetailContent.innerHTML = `
     <header class="detail-head">
@@ -312,7 +348,10 @@ function openToolDetail(tool) {
         <p class="eyebrow">${escapeHTML(tool.category)}</p>
         <h3>${escapeHTML(tool.name)}</h3>
       </div>
-      <button class="ghost" id="closeToolDetail">Close</button>
+      <div class="detail-head-actions">
+        ${adminActions}
+        <button class="ghost" id="closeToolDetail">Close</button>
+      </div>
     </header>
     <section class="detail-media">${mediaBlock}</section>
     <p class="detail-desc">${escapeHTML(tool.description)}</p>
@@ -323,8 +362,26 @@ function openToolDetail(tool) {
     </div>
   `;
 
-  toolDetailContent.querySelector("#closeToolDetail").addEventListener("click", () => toolDetailDialog.close());
+  toolDetailContent.querySelector("#closeToolDetail").addEventListener("click", () => closeModal(toolDetailDialog));
+  const editBtn = toolDetailContent.querySelector("#editToolFromDetail");
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      closeModal(toolDetailDialog);
+      openEditToolDialog(tool);
+    });
+  }
   openModal(toolDetailDialog);
+}
+
+function openEditToolDialog(tool) {
+  editToolForm.elements.id.value = tool.id;
+  editToolForm.elements.name.value = tool.name || "";
+  editToolForm.elements.url.value = tool.url || "";
+  editToolForm.elements.category.value = tool.category || "Productivity";
+  editToolForm.elements.description.value = tool.description || "";
+  editToolForm.elements.thumbnailUrl.value = tool.thumbnailUrl || "";
+  editToolForm.elements.demoVideoUrl.value = tool.demoVideoUrl || "";
+  openModal(editToolDialog);
 }
 
 function buildMediaBlock(tool) {

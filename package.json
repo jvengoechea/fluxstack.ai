@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
-    "check": "node --check app.js && node --check lib/db.js && node --check 'api/[...route].js'"
+    "check": "node --check app.js && node --check lib/db.js && node --check 'api/[...route].js'",
+    "local:prod:sync": "vercel env pull .env.local --environment=production",
+    "local:prod:start": "sh -c 'set -a; [ -f .env.local ] && . ./.env.local; node local-server.js'",
+    "local:prod": "npm run local:prod:sync && npm run local:prod:start"
   },
   "engines": {
     "node": ">=20"

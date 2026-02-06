@@ -36,6 +36,11 @@ export default async function handler(req, res) {
       return handleToolEnrich(req, res);
     }
 
+    if (segments.length === 2 && segments[0] === "tools" && method === "PATCH") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleToolUpdate(req, res, segments[1]);
+    }
+
     if (segments.length === 3 && segments[0] === "tools" && segments[2] === "vote" && method === "POST") {
       return handleVote(res, segments[1]);
     }
@@ -121,6 +126,41 @@ async function handleToolCreate(req, res) {
   );
 
   return sendJSON(res, 201, { ok: true, id: toolId });
+}
+
+async function handleToolUpdate(req, res, id) {
+  const payload = await parseBody(req);
+  const validationError = validateSubmission(payload);
+  if (validationError) return sendJSON(res, 400, { error: validationError });
+
+  const updated = await query(
+    `update tools
+        set name = $2,
+            url = $3,
+            category = $4,
+            description = $5,
+            tags = $6,
+            thumbnail_url = $7,
+            demo_video_url = $8
+      where id = $1
+      returning id`,
+    [
+      id,
+      payload.name.trim(),
+      payload.url.trim(),
+      payload.category,
+      payload.description.trim(),
+      deriveTags(payload.description),
+      normalizeOptionalUrl(payload.thumbnailUrl),
+      normalizeOptionalUrl(payload.demoVideoUrl),
+    ]
+  );
+
+  if (!updated.rows.length) {
+    return sendJSON(res, 404, { error: "Tool not found" });
+  }
+
+  return sendJSON(res, 200, { ok: true, id: updated.rows[0].id });
 }
 
 async function handleToolEnrich(req, res) {

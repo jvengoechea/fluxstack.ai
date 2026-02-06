@@ -181,6 +181,55 @@
       </form>
     </dialog>
 
+    <dialog id="editToolDialog">
+      <form id="editToolForm" method="dialog" class="submit-form">
+        <h3>Edit Tool (Admin)</h3>
+        <input type="hidden" name="id" />
+        <label>
+          Tool Name
+          <input required name="name" type="text" />
+        </label>
+        <label>
+          URL
+          <input required name="url" type="url" placeholder="https://" />
+        </label>
+        <label>
+          Category
+          <select required name="category">
+            <option value="Writing">Writing</option>
+            <option value="Image">Image</option>
+            <option value="Video">Video</option>
+            <option value="Audio">Audio</option>
+            <option value="Coding">Coding</option>
+            <option value="Research">Research</option>
+            <option value="Productivity">Productivity</option>
+          </select>
+        </label>
+        <label>
+          Description
+          <textarea required name="description" rows="3"></textarea>
+        </label>
+
+        <div class="media-row">
+          <label>
+            Thumbnail URL (optional)
+            <input name="thumbnailUrl" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            Demo Video URL (optional)
+            <input name="demoVideoUrl" type="url" placeholder="https://..." />
+          </label>
+        </div>
+
+        <button type="button" id="autoFillEdit" class="ghost">Auto-fill Media from URL</button>
+
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost" type="button" id="closeEditTool">Cancel</button>
+          <button value="submit" class="pill" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="toolDetailDialog" class="detail-dialog">
       <article id="toolDetailContent" class="tool-detail"></article>
     </dialog>
