@@ -1,45 +1,21 @@
 # Fluxstack Library
 
-A modern AI tools directory with a real backend, moderation queue, upvotes, and AI-style guided discovery.
+Fluxstack is a visual AI tools directory with moderated submissions, upvotes, smart filtering, and AI-style recommendations.
 
-## Stack (Current)
-- Frontend: Vanilla HTML/CSS/JS
-- Backend: Node.js HTTP server (`server.js`)
-- Persistence: JSON datastore (`data/db.json`)
-- Auth (admin moderation): token via `x-admin-token`
+## Production Stack (Vercel)
+- Frontend: Static `index.html` + `styles.css` + `app.js`
+- API: Vercel Serverless Function at `api/[...route].js`
+- Database: Postgres via `DATABASE_URL`
+- Admin auth: `ADMIN_TOKEN` header check (`x-admin-token`)
 
-## Features
-- Visual card-based tool browsing
-- Query + category filter with keyword-aware ranking
-- AI Guide endpoint for use-case recommendations
-- Upvotes persisted on server
-- Public submission flow
-- Admin moderation queue (approve/reject)
+## Project Structure
+- `index.html`, `styles.css`, `app.js`: UI
+- `api/[...route].js`: API endpoints
+- `lib/db.js`: Postgres pool wrapper
+- `sql/001_init.sql`: schema + seed data
+- `vercel.json`: routing and function runtime config
 
-## Run
-```bash
-npm start
-```
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
-
-### Dev mode
-```bash
-npm run dev
-```
-
-## Environment
-- `PORT` (default `3000`)
-- `HOST` (default `127.0.0.1`)
-- `ADMIN_TOKEN` (default `change-me`)
-
-Example:
-```bash
-ADMIN_TOKEN="my-secret-token" npm start
-```
-
-Use that token in the UI when opening **Admin Queue**.
-
-## API Overview
+## API Endpoints
 - `GET /api/health`
 - `GET /api/tools?query=&category=&limit=`
 - `POST /api/tools/:id/vote`
@@ -49,8 +25,22 @@ Use that token in the UI when opening **Admin Queue**.
 - `POST /api/submissions/:id/approve` (admin)
 - `POST /api/submissions/:id/reject` (admin)
 
-## Next production upgrades
-1. Move data from JSON to Postgres.
-2. Replace token auth with real admin/user auth and sessions.
-3. Add embeddings-based semantic search and RAG assistant.
-4. Add user accounts, private stacks, follows, and notifications.
+## Deploy on Vercel
+1. Import the GitHub repo in Vercel.
+2. Add environment variables:
+   - `DATABASE_URL`
+   - `ADMIN_TOKEN`
+3. Create a Postgres database (Vercel Postgres, Neon, Supabase, or Railway Postgres).
+4. Run `sql/001_init.sql` against that database.
+5. Deploy.
+
+## Local Development
+- Install deps: `npm install`
+- Run with Vercel locally: `npm run dev`
+- Set env vars in `.env.local`:
+  - `DATABASE_URL=...`
+  - `ADMIN_TOKEN=...`
+
+## Notes
+- `data/db.json` and `server.js` were removed from runtime path.
+- Persistence is now database-backed and Vercel-compatible.

@@ -1,15 +1,17 @@
 {
   "name": "fluxstack-library",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Visual AI tools directory with moderation and smart search",
+  "description": "Visual AI tools directory with Vercel serverless API and Postgres persistence",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check app.js"
+    "dev": "vercel dev",
+    "check": "node --check app.js && node --check lib/db.js && node --check 'api/[...route].js'"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }
