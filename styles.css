@@ -91,6 +91,10 @@ button {
   gap: 10px;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .layout {
   max-width: 1140px;
   margin: 0 auto;
@@ -254,10 +258,11 @@ button:hover {
   background: rgba(10, 22, 35, 0.9);
   border: 1px solid rgba(149, 182, 214, 0.2);
   border-radius: 16px;
-  padding: 14px;
+  padding: 12px;
   display: grid;
   gap: 10px;
   animation: fadeIn 260ms ease;
+  cursor: pointer;
 }
 
 .tool-top {
@@ -283,7 +288,27 @@ button:hover {
   color: var(--muted);
   line-height: 1.35;
   font-size: 0.92rem;
-  min-height: 56px;
+  min-height: 48px;
+}
+
+.tool-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(149, 182, 214, 0.25);
+  background: rgba(15, 31, 49, 0.8);
+}
+
+.tool-thumb.placeholder {
+  display: grid;
+  place-items: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.5rem;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(74, 167, 255, 0.25), transparent 45%),
+    linear-gradient(140deg, rgba(20, 33, 51, 0.95), rgba(8, 21, 34, 0.95));
+  color: #d4e8ff;
 }
 
 .tags {
@@ -311,6 +336,12 @@ button:hover {
 .card-actions a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.card-actions a,
+.vote-btn {
+  position: relative;
+  z-index: 2;
 }
 
 .vote-btn {
@@ -386,11 +417,82 @@ dialog::backdrop {
   color: var(--muted);
 }
 
+.media-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 5px;
+}
+
+.detail-dialog {
+  width: min(840px, 94vw);
+  padding: 0;
+  overflow: hidden;
+}
+
+.tool-detail {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detail-head h3 {
+  margin: 6px 0 0;
+  font-size: 1.45rem;
+}
+
+.detail-media {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(8, 19, 31, 0.85);
+}
+
+.detail-media img,
+.detail-media video,
+.detail-media iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  object-fit: cover;
+}
+
+.media-empty {
+  color: var(--muted);
+  padding: 24px;
+  text-align: center;
+}
+
+.detail-desc {
+  margin: 0;
+  color: var(--muted);
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.detail-actions a {
+  color: var(--accent);
+  text-decoration: none;
 }
 
 @keyframes fadeIn {
@@ -422,5 +524,9 @@ dialog::backdrop {
   .search-wrap,
   .assistant-input-row {
     flex-direction: column;
+  }
+
+  .media-row {
+    grid-template-columns: 1fr;
   }
 }

@@ -18,18 +18,35 @@ const openSubmit = document.getElementById("openSubmit");
 const closeSubmit = document.getElementById("closeSubmit");
 const submitDialog = document.getElementById("submitDialog");
 const submitForm = document.getElementById("submitForm");
+const autoFillSubmit = document.getElementById("autoFillSubmit");
 const adminPanel = document.getElementById("adminPanel");
 const toggleAdmin = document.getElementById("toggleAdmin");
 const pendingList = document.getElementById("pendingList");
+const openAdminAdd = document.getElementById("openAdminAdd");
+const closeAdminAdd = document.getElementById("closeAdminAdd");
+const adminAddDialog = document.getElementById("adminAddDialog");
+const adminAddForm = document.getElementById("adminAddForm");
+const autoFillAdmin = document.getElementById("autoFillAdmin");
+const toolDetailDialog = document.getElementById("toolDetailDialog");
+const toolDetailContent = document.getElementById("toolDetailContent");
 
 init().catch((error) => {
   console.error(error);
-  assistantOutput.textContent = "Failed to initialize. Start the backend server and refresh.";
+  assistantOutput.textContent = "Failed to initialize. API may be unavailable.";
 });
 
 async function init() {
   bindEvents();
   await refreshTools();
+
+  if (state.adminToken) {
+    const valid = await validateAdminToken(state.adminToken);
+    if (valid) {
+      enableAdminActions();
+    } else {
+      clearAdminToken();
+    }
+  }
 }
 
 function bindEvents() {
@@ -76,6 +93,10 @@ function bindEvents() {
     }
   });
 
+  autoFillSubmit.addEventListener("click", async () => {
+    await runAutoFill(submitForm, autoFillSubmit);
+  });
+
   toggleAdmin.addEventListener("click", async () => {
     if (!adminPanel.classList.contains("hidden")) {
       closeAdminPanel();
@@ -91,6 +112,103 @@ function bindEvents() {
     openAdminPanel();
     await renderPending();
   });
+
+  openAdminAdd.addEventListener("click", async () => {
+    const hasAccess = await ensureAdminAccess();
+    if (!hasAccess) return;
+    adminAddDialog.showModal();
+  });
+
+  closeAdminAdd.addEventListener("click", () => adminAddDialog.close());
+
+  adminAddForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const payload = Object.fromEntries(new FormData(adminAddForm).entries());
+
+    try {
+      await api("/api/tools", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-admin-token": state.adminToken,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      adminAddForm.reset();
+      adminAddDialog.close();
+      assistantOutput.textContent = `${payload.name} was published directly.`;
+      await refreshTools();
+    } catch (error) {
+      assistantOutput.textContent = error.message;
+    }
+  });
+
+  autoFillAdmin.addEventListener("click", async () => {
+    await runAutoFill(adminAddForm, autoFillAdmin);
+  });
+
+  toolDetailDialog.addEventListener("click", (event) => {
+    const bounds = toolDetailDialog.getBoundingClientRect();
+    const isInDialog =
+      bounds.top <= event.clientY &&
+      event.clientY <= bounds.top + bounds.height &&
+      bounds.left <= event.clientX &&
+      event.clientX <= bounds.left + bounds.width;
+
+    if (!isInDialog) {
+      toolDetailDialog.close();
+    }
+  });
+}
+
+async function runAutoFill(form, triggerButton) {
+  const urlInput = form.querySelector('input[name="url"]');
+  const thumbInput = form.querySelector('input[name="thumbnailUrl"]');
+  const videoInput = form.querySelector('input[name="demoVideoUrl"]');
+  const nameInput = form.querySelector('input[name="name"]');
+  const descriptionInput = form.querySelector('textarea[name="description"]');
+
+  const url = urlInput.value.trim();
+  if (!url) {
+    assistantOutput.textContent = "Enter a tool URL first, then use auto-fill.";
+    return;
+  }
+
+  const originalLabel = triggerButton.textContent;
+  triggerButton.disabled = true;
+  triggerButton.textContent = "Fetching...";
+
+  try {
+    const data = await api("/api/tools/enrich", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    const enriched = data.enrichment || {};
+
+    if (enriched.thumbnailUrl && !thumbInput.value.trim()) {
+      thumbInput.value = enriched.thumbnailUrl;
+    }
+    if (enriched.demoVideoUrl && !videoInput.value.trim()) {
+      videoInput.value = enriched.demoVideoUrl;
+    }
+    if (enriched.title && !nameInput.value.trim()) {
+      nameInput.value = enriched.title;
+    }
+    if (enriched.description && !descriptionInput.value.trim()) {
+      descriptionInput.value = enriched.description;
+    }
+
+    assistantOutput.textContent = "Media auto-fill completed. Review and adjust before submit.";
+  } catch (error) {
+    assistantOutput.textContent = `Auto-fill failed: ${error.message}`;
+  } finally {
+    triggerButton.disabled = false;
+    triggerButton.textContent = originalLabel;
+  }
 }
 
 async function refreshTools() {
@@ -131,7 +249,13 @@ function renderTools() {
   state.tools.forEach((tool) => {
     const card = document.createElement("article");
     card.className = "tool-card";
+
+    const thumbnail = tool.thumbnailUrl
+      ? `<img class="tool-thumb" src="${escapeHTML(tool.thumbnailUrl)}" alt="${escapeHTML(tool.name)} preview" loading="lazy" />`
+      : `<div class="tool-thumb placeholder">${escapeHTML(tool.name.slice(0, 1).toUpperCase())}</div>`;
+
     card.innerHTML = `
+      ${thumbnail}
       <div class="tool-top">
         <strong>${escapeHTML(tool.name)}</strong>
         <span class="badge">${escapeHTML(tool.category)}</span>
@@ -144,7 +268,8 @@ function renderTools() {
       </div>
     `;
 
-    card.querySelector(".vote-btn").addEventListener("click", async () => {
+    card.querySelector(".vote-btn").addEventListener("click", async (event) => {
+      event.stopPropagation();
       try {
         await api(`/api/tools/${tool.id}/vote`, { method: "POST" });
         await refreshTools();
@@ -153,22 +278,70 @@ function renderTools() {
       }
     });
 
+    card.querySelector("a").addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    card.addEventListener("click", () => {
+      openToolDetail(tool);
+    });
+
     toolGrid.appendChild(card);
   });
 
   resultCount.textContent = `${state.tools.length} tool${state.tools.length === 1 ? "" : "s"}`;
 }
 
-async function handleAssistant() {
-  const query = assistantInput.value.trim();
+function openToolDetail(tool) {
+  const mediaBlock = buildMediaBlock(tool);
 
-  if (!query) {
+  toolDetailContent.innerHTML = `
+    <header class="detail-head">
+      <div>
+        <p class="eyebrow">${escapeHTML(tool.category)}</p>
+        <h3>${escapeHTML(tool.name)}</h3>
+      </div>
+      <button class="ghost" id="closeToolDetail">Close</button>
+    </header>
+    <section class="detail-media">${mediaBlock}</section>
+    <p class="detail-desc">${escapeHTML(tool.description)}</p>
+    <div class="tags">${tool.tags.map((tag) => `<span>#${escapeHTML(tag)}</span>`).join("")}</div>
+    <div class="detail-actions">
+      <a href="${escapeHTML(tool.url)}" target="_blank" rel="noreferrer">Open Tool Website</a>
+      <span>▲ ${tool.votes}</span>
+    </div>
+  `;
+
+  toolDetailContent.querySelector("#closeToolDetail").addEventListener("click", () => toolDetailDialog.close());
+  toolDetailDialog.showModal();
+}
+
+function buildMediaBlock(tool) {
+  if (tool.demoVideoUrl) {
+    if (isEmbeddableVideo(tool.demoVideoUrl)) {
+      return `<iframe src="${escapeHTML(toEmbedUrl(tool.demoVideoUrl))}" title="${escapeHTML(tool.name)} demo" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    }
+
+    return `<video controls preload="metadata" src="${escapeHTML(tool.demoVideoUrl)}"></video>`;
+  }
+
+  if (tool.thumbnailUrl) {
+    return `<img src="${escapeHTML(tool.thumbnailUrl)}" alt="${escapeHTML(tool.name)} preview" loading="lazy" />`;
+  }
+
+  return `<div class="media-empty">No preview media available for this tool yet.</div>`;
+}
+
+async function handleAssistant() {
+  const userQuery = assistantInput.value.trim();
+
+  if (!userQuery) {
     assistantOutput.textContent = "Tell me your use case and I will suggest tools from this library.";
     return;
   }
 
   try {
-    const data = await api(`/api/assistant?q=${encodeURIComponent(query)}`);
+    const data = await api(`/api/assistant?q=${encodeURIComponent(userQuery)}`);
 
     if (!data.recommendations.length) {
       assistantOutput.textContent = "No direct match found. Try a more specific request.";
@@ -179,8 +352,8 @@ async function handleAssistant() {
       .map((tool, idx) => `${idx + 1}. <strong>${escapeHTML(tool.name)}</strong> - ${escapeHTML(tool.description)}`)
       .join("<br>")}`;
 
-    searchInput.value = query;
-    state.query = query;
+    searchInput.value = userQuery;
+    state.query = userQuery;
     if (data.inferredCategory) {
       state.activeCategory = data.inferredCategory;
     }
@@ -240,6 +413,7 @@ async function renderPending() {
     if (error.message === "Admin token required") {
       clearAdminToken();
       closeAdminPanel();
+      disableAdminActions();
       assistantOutput.textContent = "Admin access denied. Reopen Admin Queue and enter a valid token.";
       return;
     }
@@ -250,7 +424,10 @@ async function renderPending() {
 async function ensureAdminAccess() {
   if (state.adminToken) {
     const valid = await validateAdminToken(state.adminToken);
-    if (valid) return true;
+    if (valid) {
+      enableAdminActions();
+      return true;
+    }
     clearAdminToken();
   }
 
@@ -266,6 +443,7 @@ async function ensureAdminAccess() {
 
   state.adminToken = candidate;
   sessionStorage.setItem("fluxstack.adminToken", state.adminToken);
+  enableAdminActions();
   return true;
 }
 
@@ -290,6 +468,14 @@ function clearAdminToken() {
   sessionStorage.removeItem("fluxstack.adminToken");
 }
 
+function enableAdminActions() {
+  openAdminAdd.classList.remove("hidden");
+}
+
+function disableAdminActions() {
+  openAdminAdd.classList.add("hidden");
+}
+
 function openAdminPanel() {
   adminPanel.classList.remove("hidden");
   toggleAdmin.textContent = "Close Admin";
@@ -298,6 +484,32 @@ function openAdminPanel() {
 function closeAdminPanel() {
   adminPanel.classList.add("hidden");
   toggleAdmin.textContent = "Admin Queue";
+}
+
+function isEmbeddableVideo(url) {
+  return /youtube\.com|youtu\.be|vimeo\.com/i.test(url);
+}
+
+function toEmbedUrl(url) {
+  if (/youtube\.com\/watch\?v=/i.test(url)) {
+    const parsed = new URL(url);
+    const id = parsed.searchParams.get("v");
+    return `https://www.youtube.com/embed/${id}`;
+  }
+
+  if (/youtu\.be\//i.test(url)) {
+    const parsed = new URL(url);
+    const id = parsed.pathname.replace("/", "");
+    return `https://www.youtube.com/embed/${id}`;
+  }
+
+  if (/vimeo\.com\//i.test(url)) {
+    const parsed = new URL(url);
+    const id = parsed.pathname.split("/").filter(Boolean).pop();
+    return `https://player.vimeo.com/video/${id}`;
+  }
+
+  return url;
 }
 
 async function api(url, options = {}) {

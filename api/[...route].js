@@ -10,8 +10,12 @@ const CATEGORY_KEYWORDS = {
   Productivity: ["notes", "task", "workflow", "organize", "meeting", "plan"],
 };
 
+let schemaReadyPromise;
+
 export default async function handler(req, res) {
   try {
+    await ensureSchema();
+
     const segments = normalizeSegments(req.query.route);
     const method = req.method || "GET";
 
@@ -21,6 +25,15 @@ export default async function handler(req, res) {
 
     if (segments.length === 1 && segments[0] === "tools" && method === "GET") {
       return handleToolsList(req, res);
+    }
+
+    if (segments.length === 1 && segments[0] === "tools" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleToolCreate(req, res);
+    }
+
+    if (segments.length === 2 && segments[0] === "tools" && segments[1] === "enrich" && method === "POST") {
+      return handleToolEnrich(req, res);
     }
 
     if (segments.length === 3 && segments[0] === "tools" && segments[2] === "vote" && method === "POST") {
@@ -64,7 +77,12 @@ async function handleToolsList(req, res) {
   const limitParam = Number.parseInt(String(req.query.limit || "0"), 10);
 
   const result = await query(
-    "select id, name, category, description, tags, url, votes from tools order by created_at desc"
+    `select id, name, category, description, tags, url, votes,
+            thumbnail_url as "thumbnailUrl",
+            demo_video_url as "demoVideoUrl",
+            created_at as "createdAt"
+       from tools
+      order by created_at desc`
   );
 
   let ranked = filterAndRankTools(result.rows, queryText, category);
@@ -77,6 +95,62 @@ async function handleToolsList(req, res) {
     tools: ranked,
     categories,
     inferredCategory: inferCategory(queryText.toLowerCase()),
+  });
+}
+
+async function handleToolCreate(req, res) {
+  const payload = await parseBody(req);
+  const validationError = validateSubmission(payload);
+  if (validationError) return sendJSON(res, 400, { error: validationError });
+
+  const toolId = generateToolId(payload.name);
+
+  await query(
+    `insert into tools (id, name, url, category, description, tags, votes, thumbnail_url, demo_video_url)
+     values ($1, $2, $3, $4, $5, $6, 0, $7, $8)`,
+    [
+      toolId,
+      payload.name.trim(),
+      payload.url.trim(),
+      payload.category,
+      payload.description.trim(),
+      deriveTags(payload.description),
+      normalizeOptionalUrl(payload.thumbnailUrl),
+      normalizeOptionalUrl(payload.demoVideoUrl),
+    ]
+  );
+
+  return sendJSON(res, 201, { ok: true, id: toolId });
+}
+
+async function handleToolEnrich(req, res) {
+  const payload = await parseBody(req);
+  const rawUrl = String(payload.url || "").trim();
+
+  if (!rawUrl) return sendJSON(res, 400, { error: "URL is required" });
+
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return sendJSON(res, 400, { error: "URL must be http or https" });
+    }
+  } catch {
+    return sendJSON(res, 400, { error: "Invalid URL" });
+  }
+
+  const html = await fetchHTML(parsed.toString());
+  const meta = extractMeta(parsed, html);
+
+  return sendJSON(res, 200, {
+    ok: true,
+    enrichment: {
+      title: meta.title || null,
+      description: meta.description || null,
+      thumbnailUrl: meta.thumbnailUrl || null,
+      demoVideoUrl: meta.demoVideoUrl || null,
+      source: "open-graph",
+    },
   });
 }
 
@@ -95,7 +169,11 @@ async function handleAssistant(req, res) {
   if (!q) return sendJSON(res, 400, { error: "Query is required" });
 
   const result = await query(
-    "select id, name, category, description, tags, url, votes from tools order by created_at desc"
+    `select id, name, category, description, tags, url, votes,
+            thumbnail_url as "thumbnailUrl",
+            demo_video_url as "demoVideoUrl"
+       from tools
+      order by created_at desc`
   );
 
   const inferredCategory = inferCategory(q.toLowerCase());
@@ -114,9 +192,17 @@ async function handleSubmissionCreate(req, res) {
   if (validationError) return sendJSON(res, 400, { error: validationError });
 
   await query(
-    `insert into submissions (name, url, category, description, tags, votes)
-     values ($1, $2, $3, $4, $5, 0)`,
-    [payload.name.trim(), payload.url.trim(), payload.category, payload.description.trim(), deriveTags(payload.description)]
+    `insert into submissions (name, url, category, description, tags, votes, thumbnail_url, demo_video_url)
+     values ($1, $2, $3, $4, $5, 0, $6, $7)`,
+    [
+      payload.name.trim(),
+      payload.url.trim(),
+      payload.category,
+      payload.description.trim(),
+      deriveTags(payload.description),
+      normalizeOptionalUrl(payload.thumbnailUrl),
+      normalizeOptionalUrl(payload.demoVideoUrl),
+    ]
   );
 
   return sendJSON(res, 201, { ok: true });
@@ -124,7 +210,12 @@ async function handleSubmissionCreate(req, res) {
 
 async function handleSubmissionList(res) {
   const result = await query(
-    "select id, name, url, category, description, tags, votes, submitted_at from submissions order by submitted_at desc"
+    `select id, name, url, category, description, tags, votes,
+            thumbnail_url as "thumbnailUrl",
+            demo_video_url as "demoVideoUrl",
+            submitted_at as "submittedAt"
+       from submissions
+      order by submitted_at desc`
   );
   return sendJSON(res, 200, { submissions: result.rows });
 }
@@ -134,11 +225,11 @@ async function handleSubmissionApprove(res, id) {
     `with moved as (
       delete from submissions
       where id = $1
-      returning name, url, category, description, tags, votes
+      returning name, url, category, description, tags, votes, thumbnail_url, demo_video_url
     )
-    insert into tools (id, name, url, category, description, tags, votes)
+    insert into tools (id, name, url, category, description, tags, votes, thumbnail_url, demo_video_url)
     select concat('tool-', replace(lower(name), ' ', '-'), '-', substring(md5(random()::text), 1, 6)),
-           name, url, category, description, tags, votes
+           name, url, category, description, tags, votes, thumbnail_url, demo_video_url
     from moved
     returning id`,
     [id]
@@ -231,6 +322,14 @@ function validateSubmission(payload) {
   }
 
   if (payload.description.length > 400) return "Description is too long";
+
+  const optionalUrlFields = ["thumbnailUrl", "demoVideoUrl"];
+  for (const field of optionalUrlFields) {
+    if (payload[field] && !isValidHttpUrl(String(payload[field]))) {
+      return `Invalid ${field}`;
+    }
+  }
+
   return null;
 }
 
@@ -240,6 +339,118 @@ function deriveTags(text) {
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length > 4)
     .slice(0, 3);
+}
+
+function normalizeOptionalUrl(value) {
+  const trimmed = String(value || "").trim();
+  return trimmed || null;
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return ["http:", "https:"].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function generateToolId(name) {
+  const slug = String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 50);
+  return `tool-${slug}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function fetchHTML(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        "user-agent": "FluxstackBot/1.0 (+https://fluxstack.ai)",
+        accept: "text/html,application/xhtml+xml",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Could not fetch URL (${response.status})`);
+    }
+
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function extractMeta(baseUrl, html) {
+  const title =
+    findMetaContent(html, "property", "og:title") ||
+    findMetaContent(html, "name", "twitter:title") ||
+    findTagContent(html, "title");
+
+  const description =
+    findMetaContent(html, "property", "og:description") ||
+    findMetaContent(html, "name", "description") ||
+    findMetaContent(html, "name", "twitter:description");
+
+  const thumb =
+    findMetaContent(html, "property", "og:image") ||
+    findMetaContent(html, "name", "twitter:image") ||
+    findMetaContent(html, "property", "og:image:url");
+
+  const video =
+    findMetaContent(html, "property", "og:video") ||
+    findMetaContent(html, "property", "og:video:url") ||
+    findMetaContent(html, "name", "twitter:player") ||
+    null;
+
+  const thumbnailUrl = absolutizeUrl(baseUrl, thumb);
+  const demoVideoUrl = absolutizeUrl(baseUrl, video);
+
+  return {
+    title: cleanText(title),
+    description: cleanText(description),
+    thumbnailUrl,
+    demoVideoUrl,
+  };
+}
+
+function findMetaContent(html, attrName, attrValue) {
+  const escaped = escapeRegex(attrValue);
+  const regex = new RegExp(`<meta[^>]*${attrName}=["']${escaped}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");
+  const reverseRegex = new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*${attrName}=["']${escaped}["'][^>]*>`, "i");
+  const match = html.match(regex) || html.match(reverseRegex);
+  return match?.[1] || null;
+}
+
+function findTagContent(html, tagName) {
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
+  const match = html.match(regex);
+  return match?.[1] || null;
+}
+
+function cleanText(value) {
+  if (!value) return null;
+  return String(value).replace(/\s+/g, " ").trim();
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function absolutizeUrl(baseUrl, candidate) {
+  if (!candidate) return null;
+  try {
+    return new URL(candidate, baseUrl).toString();
+  } catch {
+    return null;
+  }
 }
 
 async function parseBody(req) {
@@ -264,6 +475,9 @@ async function parseBody(req) {
 }
 
 function getErrorMessage(error) {
+  if (error?.name === "AbortError") {
+    return "Request timed out while fetching metadata";
+  }
   if (error?.message?.includes("ECONNREFUSED") || error?.message?.includes("DATABASE_URL")) {
     return "Database connection failed. Set DATABASE_URL and run schema setup.";
   }
@@ -276,4 +490,48 @@ function sendJSON(res, status, payload) {
   res.setHeader("content-type", "application/json; charset=utf-8");
   res.setHeader("cache-control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+async function ensureSchema() {
+  if (!schemaReadyPromise) {
+    schemaReadyPromise = query(`
+      create extension if not exists pgcrypto;
+
+      create table if not exists tools (
+        id text primary key,
+        name text not null,
+        category text not null,
+        description text not null,
+        tags text[] not null default '{}',
+        url text not null,
+        votes integer not null default 0,
+        thumbnail_url text,
+        demo_video_url text,
+        created_at timestamptz not null default now()
+      );
+
+      create table if not exists submissions (
+        id uuid primary key default gen_random_uuid(),
+        name text not null,
+        category text not null,
+        description text not null,
+        tags text[] not null default '{}',
+        url text not null,
+        votes integer not null default 0,
+        thumbnail_url text,
+        demo_video_url text,
+        submitted_at timestamptz not null default now()
+      );
+
+      alter table tools add column if not exists thumbnail_url text;
+      alter table tools add column if not exists demo_video_url text;
+      alter table submissions add column if not exists thumbnail_url text;
+      alter table submissions add column if not exists demo_video_url text;
+    `).catch((error) => {
+      schemaReadyPromise = undefined;
+      throw error;
+    });
+  }
+
+  return schemaReadyPromise;
 }
