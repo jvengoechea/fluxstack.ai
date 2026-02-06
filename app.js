@@ -172,7 +172,7 @@ function bindEvents() {
     const id = payload.id;
 
     try {
-      await api(`/api/tools/${id}/update`, {
+      await api("/api/tool-update", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -225,7 +225,7 @@ async function runAutoFill(form, triggerButton) {
   triggerButton.textContent = "Fetching...";
 
   try {
-    const data = await api("/api/tools/enrich", {
+    const data = await api("/api/tools-enrich", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ url }),
@@ -315,7 +315,11 @@ function renderTools() {
     card.querySelector(".vote-btn").addEventListener("click", async (event) => {
       event.stopPropagation();
       try {
-        await api(`/api/tools/${tool.id}/vote`, { method: "POST" });
+        await api("/api/tool-vote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: tool.id }),
+        });
         await refreshTools();
       } catch (error) {
         assistantOutput.textContent = error.message;
@@ -460,18 +464,26 @@ async function renderPending() {
       `;
 
       container.querySelector(".approve").addEventListener("click", async () => {
-        await api(`/api/submissions/${item.id}/approve`, {
+        await api("/api/submission-approve", {
           method: "POST",
-          headers: { "x-admin-token": state.adminToken },
+          headers: {
+            "content-type": "application/json",
+            "x-admin-token": state.adminToken,
+          },
+          body: JSON.stringify({ id: item.id }),
         });
         await renderPending();
         await refreshTools();
       });
 
       container.querySelector(".reject").addEventListener("click", async () => {
-        await api(`/api/submissions/${item.id}/reject`, {
+        await api("/api/submission-reject", {
           method: "POST",
-          headers: { "x-admin-token": state.adminToken },
+          headers: {
+            "content-type": "application/json",
+            "x-admin-token": state.adminToken,
+          },
+          body: JSON.stringify({ id: item.id }),
         });
         await renderPending();
       });

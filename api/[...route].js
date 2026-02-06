@@ -32,6 +32,29 @@ export default async function handler(req, res) {
       return handleToolCreate(req, res);
     }
 
+    if (segments.length === 1 && segments[0] === "tools-enrich" && method === "POST") {
+      return handleToolEnrich(req, res);
+    }
+
+    if (segments.length === 1 && segments[0] === "tool-vote" && method === "POST") {
+      return handleToolVoteByPayload(req, res);
+    }
+
+    if (segments.length === 1 && segments[0] === "tool-update" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleToolUpdateByPayload(req, res);
+    }
+
+    if (segments.length === 1 && segments[0] === "submission-approve" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleSubmissionApproveByPayload(req, res);
+    }
+
+    if (segments.length === 1 && segments[0] === "submission-reject" && method === "POST") {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: "Admin token required" });
+      return handleSubmissionRejectByPayload(req, res);
+    }
+
     if (segments.length === 2 && segments[0] === "tools" && segments[1] === "enrich" && method === "POST") {
       return handleToolEnrich(req, res);
     }
@@ -168,6 +191,20 @@ async function handleToolUpdate(req, res, id) {
   return sendJSON(res, 200, { ok: true, id: updated.rows[0].id });
 }
 
+async function handleToolVoteByPayload(req, res) {
+  const payload = await parseBody(req);
+  const id = String(payload.id || "").trim();
+  if (!id) return sendJSON(res, 400, { error: "Tool id is required" });
+  return handleVote(res, id);
+}
+
+async function handleToolUpdateByPayload(req, res) {
+  const payload = await parseBody(req);
+  const id = String(payload.id || "").trim();
+  if (!id) return sendJSON(res, 400, { error: "Tool id is required" });
+  return handleToolUpdate({ ...req, body: payload }, res, id);
+}
+
 async function handleToolEnrich(req, res) {
   const payload = await parseBody(req);
   const rawUrl = String(payload.url || "").trim();
@@ -294,6 +331,20 @@ async function handleSubmissionReject(res, id) {
   }
 
   return sendJSON(res, 200, { ok: true });
+}
+
+async function handleSubmissionApproveByPayload(req, res) {
+  const payload = await parseBody(req);
+  const id = String(payload.id || "").trim();
+  if (!id) return sendJSON(res, 400, { error: "Submission id is required" });
+  return handleSubmissionApprove(res, id);
+}
+
+async function handleSubmissionRejectByPayload(req, res) {
+  const payload = await parseBody(req);
+  const id = String(payload.id || "").trim();
+  if (!id) return sendJSON(res, 400, { error: "Submission id is required" });
+  return handleSubmissionReject(res, id);
 }
 
 function normalizeSegments(req) {
