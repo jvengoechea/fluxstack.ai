@@ -32,7 +32,7 @@ const toolDetailContent = document.getElementById("toolDetailContent");
 
 init().catch((error) => {
   console.error(error);
-  assistantOutput.textContent = "Failed to initialize. API may be unavailable.";
+  assistantOutput.textContent = "AI Guide: Coming Soon.";
 });
 
 async function init() {
@@ -359,7 +359,8 @@ async function handleAssistant() {
     }
     await refreshTools();
   } catch (error) {
-    assistantOutput.textContent = error.message;
+    console.error(error);
+    assistantOutput.textContent = "AI Guide: Coming Soon.";
   }
 }
 
