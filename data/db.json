@@ -1,0 +1,77 @@
+{
+  "tools": [
+    {
+      "id": "tool-chatgpt",
+      "name": "ChatGPT",
+      "category": "Writing",
+      "description": "General-purpose AI assistant for drafting, ideation, and synthesis.",
+      "tags": ["chat", "brainstorm", "workflow"],
+      "url": "https://chatgpt.com",
+      "votes": 128
+    },
+    {
+      "id": "tool-perplexity",
+      "name": "Perplexity",
+      "category": "Research",
+      "description": "Answer engine for quick research with citations and follow-up exploration.",
+      "tags": ["search", "citations", "learning"],
+      "url": "https://www.perplexity.ai",
+      "votes": 97
+    },
+    {
+      "id": "tool-midjourney",
+      "name": "Midjourney",
+      "category": "Image",
+      "description": "High-quality image generation for concept art, campaigns, and ideation.",
+      "tags": ["art", "design", "imagination"],
+      "url": "https://www.midjourney.com",
+      "votes": 110
+    },
+    {
+      "id": "tool-runway",
+      "name": "Runway",
+      "category": "Video",
+      "description": "AI-assisted video creation, motion transfer, and content generation tools.",
+      "tags": ["editing", "motion", "creator"],
+      "url": "https://runwayml.com",
+      "votes": 82
+    },
+    {
+      "id": "tool-elevenlabs",
+      "name": "ElevenLabs",
+      "category": "Audio",
+      "description": "Natural voice synthesis and cloning for narration and audio experiences.",
+      "tags": ["voice", "tts", "podcast"],
+      "url": "https://elevenlabs.io",
+      "votes": 91
+    },
+    {
+      "id": "tool-cursor",
+      "name": "Cursor",
+      "category": "Coding",
+      "description": "AI-native code editor for faster implementation and refactors.",
+      "tags": ["developer", "pair-programming", "productivity"],
+      "url": "https://www.cursor.com",
+      "votes": 104
+    },
+    {
+      "id": "tool-notion-ai",
+      "name": "Notion AI",
+      "category": "Productivity",
+      "description": "Integrated writing, summarization, and task support in workspace docs.",
+      "tags": ["notes", "planning", "teams"],
+      "url": "https://www.notion.so/product/ai",
+      "votes": 71
+    },
+    {
+      "id": "tool-synthesia",
+      "name": "Synthesia",
+      "category": "Video",
+      "description": "Create presenter videos from script with multilingual avatar output.",
+      "tags": ["presentations", "training", "localization"],
+      "url": "https://www.synthesia.io",
+      "votes": 64
+    }
+  ],
+  "submissions": []
+}

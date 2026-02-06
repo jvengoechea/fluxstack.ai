@@ -1,0 +1,15 @@
+{
+  "name": "fluxstack-library",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Visual AI tools directory with moderation and smart search",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
