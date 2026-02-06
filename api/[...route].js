@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   try {
     await ensureSchema();
 
-    const segments = normalizeSegments(req.query.route);
+    const segments = normalizeSegments(req);
     const method = req.method || "GET";
 
     if (segments.length === 1 && segments[0] === "health" && method === "GET") {
@@ -251,10 +251,22 @@ async function handleSubmissionReject(res, id) {
   return sendJSON(res, 200, { ok: true });
 }
 
-function normalizeSegments(routeParam) {
-  if (!routeParam) return [];
+function normalizeSegments(req) {
+  const routeParam = req?.query?.route;
+  if (!routeParam) {
+    const url = String(req?.url || "");
+    const pathname = url.split("?")[0] || "";
+    if (!pathname.startsWith("/api/")) return [];
+    return pathname.replace(/^\/api\/?/, "").split("/").filter(Boolean);
+  }
   if (Array.isArray(routeParam)) return routeParam.filter(Boolean);
-  return [String(routeParam)];
+  const asString = String(routeParam);
+
+  if (asString.includes("/")) {
+    return asString.split("/").filter(Boolean);
+  }
+
+  return [asString];
 }
 
 function isAdmin(req) {
