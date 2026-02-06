@@ -15,6 +15,7 @@ const assistantInput = document.getElementById("assistantInput");
 const askAssistant = document.getElementById("askAssistant");
 const assistantOutput = document.getElementById("assistantOutput");
 const openSubmit = document.getElementById("openSubmit");
+const adminLogin = document.getElementById("adminLogin");
 const closeSubmit = document.getElementById("closeSubmit");
 const submitDialog = document.getElementById("submitDialog");
 const submitForm = document.getElementById("submitForm");
@@ -71,6 +72,12 @@ function bindEvents() {
 
   openSubmit.addEventListener("click", () => submitDialog.showModal());
   closeSubmit.addEventListener("click", () => submitDialog.close());
+
+  adminLogin.addEventListener("click", async () => {
+    const hasAccess = await ensureAdminAccess();
+    if (!hasAccess) return;
+    assistantOutput.textContent = "Admin mode enabled.";
+  });
 
   submitForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -471,10 +478,15 @@ function clearAdminToken() {
 
 function enableAdminActions() {
   openAdminAdd.classList.remove("hidden");
+  toggleAdmin.classList.remove("hidden");
+  adminLogin.classList.add("hidden");
 }
 
 function disableAdminActions() {
-  openAdminAdd.classList.remove("hidden");
+  openAdminAdd.classList.add("hidden");
+  toggleAdmin.classList.add("hidden");
+  adminLogin.classList.remove("hidden");
+  closeAdminPanel();
 }
 
 function openAdminPanel() {
