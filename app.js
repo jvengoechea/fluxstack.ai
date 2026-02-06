@@ -70,8 +70,11 @@ function bindEvents() {
     }
   });
 
-  openSubmit.addEventListener("click", () => submitDialog.showModal());
-  closeSubmit.addEventListener("click", () => submitDialog.close());
+  openSubmit.addEventListener("click", () => {
+    const opened = openModal(submitDialog);
+    if (!opened) assistantOutput.textContent = "Submit modal could not open in this browser.";
+  });
+  closeSubmit.addEventListener("click", () => closeModal(submitDialog));
 
   adminLogin.addEventListener("click", async () => {
     const hasAccess = await ensureAdminAccess();
@@ -123,10 +126,11 @@ function bindEvents() {
   openAdminAdd.addEventListener("click", async () => {
     const hasAccess = await ensureAdminAccess();
     if (!hasAccess) return;
-    adminAddDialog.showModal();
+    const opened = openModal(adminAddDialog);
+    if (!opened) assistantOutput.textContent = "Admin form could not open in this browser.";
   });
 
-  closeAdminAdd.addEventListener("click", () => adminAddDialog.close());
+  closeAdminAdd.addEventListener("click", () => closeModal(adminAddDialog));
 
   adminAddForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -144,7 +148,7 @@ function bindEvents() {
       });
 
       adminAddForm.reset();
-      adminAddDialog.close();
+      closeModal(adminAddDialog);
       assistantOutput.textContent = `${payload.name} was published directly.`;
       await refreshTools();
     } catch (error) {
@@ -165,7 +169,7 @@ function bindEvents() {
       event.clientX <= bounds.left + bounds.width;
 
     if (!isInDialog) {
-      toolDetailDialog.close();
+      closeModal(toolDetailDialog);
     }
   });
 }
@@ -320,7 +324,7 @@ function openToolDetail(tool) {
   `;
 
   toolDetailContent.querySelector("#closeToolDetail").addEventListener("click", () => toolDetailDialog.close());
-  toolDetailDialog.showModal();
+  openModal(toolDetailDialog);
 }
 
 function buildMediaBlock(tool) {
@@ -440,12 +444,16 @@ async function ensureAdminAccess() {
   }
 
   const token = window.prompt("Enter admin token");
-  if (!token || !token.trim()) return false;
+  if (!token || !token.trim()) {
+    assistantOutput.textContent = "Admin login canceled.";
+    return false;
+  }
 
   const candidate = token.trim();
   const valid = await validateAdminToken(candidate);
   if (!valid) {
     window.alert("Invalid admin token.");
+    assistantOutput.textContent = "Invalid admin token.";
     return false;
   }
 
@@ -497,6 +505,25 @@ function openAdminPanel() {
 function closeAdminPanel() {
   adminPanel.classList.add("hidden");
   toggleAdmin.textContent = "Admin Queue";
+}
+
+function openModal(dialog) {
+  if (!dialog) return false;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+    return true;
+  }
+  dialog.setAttribute("open", "open");
+  return true;
+}
+
+function closeModal(dialog) {
+  if (!dialog) return;
+  if (typeof dialog.close === "function") {
+    dialog.close();
+    return;
+  }
+  dialog.removeAttribute("open");
 }
 
 function isEmbeddableVideo(url) {
