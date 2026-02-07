@@ -189,14 +189,8 @@ function bindEvents() {
   });
 
   toolDetailDialog.addEventListener("click", (event) => {
-    const bounds = toolDetailDialog.getBoundingClientRect();
-    const isInDialog =
-      bounds.top <= event.clientY &&
-      event.clientY <= bounds.top + bounds.height &&
-      bounds.left <= event.clientX &&
-      event.clientX <= bounds.left + bounds.width;
-
-    if (!isInDialog) {
+    // Only close when clicking the backdrop, never when clicking inside content.
+    if (event.target === toolDetailDialog) {
       closeModal(toolDetailDialog);
     }
   });
@@ -376,7 +370,9 @@ function openToolDetail(tool) {
   toolDetailContent.querySelector("#closeToolDetail").addEventListener("click", () => closeModal(toolDetailDialog));
   const editBtn = toolDetailContent.querySelector("#editToolFromDetail");
   if (editBtn) {
-    editBtn.addEventListener("click", () => {
+    editBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       openEditFromDetail(tool);
     });
   }
