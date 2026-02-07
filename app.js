@@ -40,6 +40,7 @@ init().catch((error) => {
 });
 
 async function init() {
+  ensureEditVotesControls();
   bindEvents();
   await refreshTools();
 
@@ -191,9 +192,12 @@ function bindEvents() {
     await runAutoFill(editToolForm, autoFillEdit);
   });
 
-  resetEditVotes.addEventListener("click", () => {
-    editToolForm.elements.votes.value = "0";
-  });
+  if (resetEditVotes) {
+    resetEditVotes.addEventListener("click", () => {
+      const votesField = editToolForm.elements.namedItem("votes");
+      if (votesField) votesField.value = "0";
+    });
+  }
 
   toolDetailDialog.addEventListener("click", (event) => {
     // Only close when clicking the backdrop, never when clicking inside content.
@@ -619,6 +623,34 @@ function setFormValue(form, name, value) {
   const field = form.elements.namedItem(name);
   if (!field) return;
   field.value = value;
+}
+
+function ensureEditVotesControls() {
+  if (!editToolForm) return;
+
+  let votesField = editToolForm.elements.namedItem("votes");
+  if (!votesField) {
+    const dialogActions = editToolForm.querySelector(".dialog-actions");
+    const wrapper = document.createElement("div");
+    wrapper.className = "votes-row";
+    wrapper.innerHTML = `
+      <label>
+        Upvotes
+        <input required name="votes" type="number" min="0" step="1" />
+      </label>
+      <button type="button" id="resetEditVotesDynamic" class="ghost reset-votes">Reset to 0</button>
+    `;
+    if (dialogActions) {
+      editToolForm.insertBefore(wrapper, dialogActions);
+    } else {
+      editToolForm.appendChild(wrapper);
+    }
+    votesField = editToolForm.elements.namedItem("votes");
+    const dynamicReset = wrapper.querySelector("#resetEditVotesDynamic");
+    dynamicReset?.addEventListener("click", () => {
+      if (votesField) votesField.value = "0";
+    });
+  }
 }
 
 function openModal(dialog) {

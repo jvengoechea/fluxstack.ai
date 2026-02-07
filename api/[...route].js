@@ -167,7 +167,7 @@ async function handleToolUpdate(req, res, id) {
   const validationError = validateSubmission(payload);
   if (validationError) return sendJSON(res, 400, { error: validationError });
   const votes = parseVotes(payload.votes);
-  if (votes === null) return sendJSON(res, 400, { error: "Invalid votes value" });
+  if (votes === "invalid") return sendJSON(res, 400, { error: "Invalid votes value" });
   const thumbnailUrl = resolveThumbnailUrl(payload.thumbnailUrl, payload.demoVideoUrl);
 
   const updated = await query(
@@ -179,7 +179,7 @@ async function handleToolUpdate(req, res, id) {
             tags = $6,
             thumbnail_url = $7,
             demo_video_url = $8,
-            votes = $9
+            votes = coalesce($9::int, votes)
       where id = $1
       returning id`,
     [
@@ -525,8 +525,9 @@ function inferThumbnailFromVideoUrl(videoUrl) {
 }
 
 function parseVotes(value) {
-  const num = Number.parseInt(String(value ?? ""), 10);
-  if (!Number.isFinite(num) || Number.isNaN(num) || num < 0) return null;
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const num = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(num) || Number.isNaN(num) || num < 0) return "invalid";
   return num;
 }
 
