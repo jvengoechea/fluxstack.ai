@@ -459,6 +459,19 @@ dialog::backdrop {
   grid-template-columns: 1fr 1fr;
 }
 
+.votes-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.reset-votes {
+  white-space: nowrap;
+  border-color: rgba(255, 185, 87, 0.45);
+  background: rgba(255, 185, 87, 0.14);
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -568,6 +581,10 @@ dialog::backdrop {
   }
 
   .media-row {
+    grid-template-columns: 1fr;
+  }
+
+  .votes-row {
     grid-template-columns: 1fr;
   }
 }

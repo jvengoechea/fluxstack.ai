@@ -142,6 +142,7 @@ async function handleToolCreate(req, res) {
   if (validationError) return sendJSON(res, 400, { error: validationError });
 
   const toolId = generateToolId(payload.name);
+  const thumbnailUrl = resolveThumbnailUrl(payload.thumbnailUrl, payload.demoVideoUrl);
 
   await query(
     `insert into tools (id, name, url, category, description, tags, votes, thumbnail_url, demo_video_url)
@@ -153,7 +154,7 @@ async function handleToolCreate(req, res) {
       payload.category,
       payload.description.trim(),
       deriveTags(payload.description),
-      normalizeOptionalUrl(payload.thumbnailUrl),
+      thumbnailUrl,
       normalizeOptionalUrl(payload.demoVideoUrl),
     ]
   );
@@ -167,6 +168,7 @@ async function handleToolUpdate(req, res, id) {
   if (validationError) return sendJSON(res, 400, { error: validationError });
   const votes = parseVotes(payload.votes);
   if (votes === null) return sendJSON(res, 400, { error: "Invalid votes value" });
+  const thumbnailUrl = resolveThumbnailUrl(payload.thumbnailUrl, payload.demoVideoUrl);
 
   const updated = await query(
     `update tools
@@ -187,7 +189,7 @@ async function handleToolUpdate(req, res, id) {
       payload.category,
       payload.description.trim(),
       deriveTags(payload.description),
-      normalizeOptionalUrl(payload.thumbnailUrl),
+      thumbnailUrl,
       normalizeOptionalUrl(payload.demoVideoUrl),
       votes,
     ]
@@ -487,6 +489,39 @@ function deriveTags(text) {
 function normalizeOptionalUrl(value) {
   const trimmed = String(value || "").trim();
   return trimmed || null;
+}
+
+function resolveThumbnailUrl(thumbnailUrl, demoVideoUrl) {
+  const explicit = normalizeOptionalUrl(thumbnailUrl);
+  if (explicit) return explicit;
+  return inferThumbnailFromVideoUrl(normalizeOptionalUrl(demoVideoUrl));
+}
+
+function inferThumbnailFromVideoUrl(videoUrl) {
+  if (!videoUrl) return null;
+  try {
+    const parsed = new URL(videoUrl);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host.includes("youtube.com")) {
+      const id = parsed.searchParams.get("v");
+      return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+    }
+
+    if (host.includes("youtu.be")) {
+      const id = parsed.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+    }
+
+    if (host.includes("vimeo.com")) {
+      const id = parsed.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://vumbnail.com/${id}.jpg` : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 function parseVotes(value) {

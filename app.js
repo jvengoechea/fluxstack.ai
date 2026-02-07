@@ -162,6 +162,7 @@ function bindEvents() {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(editToolForm).entries());
     const id = payload.id;
+    const previousCategory = state.tools.find((tool) => tool.id === id)?.category || null;
 
     try {
       await api("/api/tool-update", {
@@ -174,9 +175,14 @@ function bindEvents() {
       });
 
       closeModal(editToolDialog);
+      // Keep edited tool visible even if category changed from the current filter.
+      if (previousCategory && previousCategory !== payload.category && state.activeCategory !== "All") {
+        state.activeCategory = "All";
+      }
       assistantOutput.textContent = `${payload.name} updated successfully.`;
       await refreshTools();
     } catch (error) {
+      window.alert(error.message);
       assistantOutput.textContent = error.message;
     }
   });
