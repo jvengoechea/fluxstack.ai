@@ -377,9 +377,7 @@ function openToolDetail(tool) {
   const editBtn = toolDetailContent.querySelector("#editToolFromDetail");
   if (editBtn) {
     editBtn.addEventListener("click", () => {
-      closeModal(toolDetailDialog);
-      // Defer opening the next modal to avoid same-tick dialog state conflicts.
-      setTimeout(() => openEditToolDialog(tool), 0);
+      openEditFromDetail(tool);
     });
   }
 
@@ -418,7 +416,38 @@ function openEditToolDialog(tool) {
   editToolForm.elements.votes.value = String(tool.votes ?? 0);
   editToolForm.elements.thumbnailUrl.value = tool.thumbnailUrl || "";
   editToolForm.elements.demoVideoUrl.value = tool.demoVideoUrl || "";
-  openModal(editToolDialog);
+  return openModal(editToolDialog);
+}
+
+function openEditFromDetail(tool) {
+  const openAfterClose = () => {
+    // Delay a tick so browsers fully clear modal state.
+    setTimeout(() => {
+      const opened = openEditToolDialog(tool);
+      if (!opened) {
+        assistantOutput.textContent = "Could not open edit form in this browser. Use the card Edit button.";
+      }
+    }, 40);
+  };
+
+  // Fallback in case close event is not delivered by the browser.
+  let fallbackUsed = false;
+  const fallback = setTimeout(() => {
+    fallbackUsed = true;
+    openAfterClose();
+  }, 120);
+
+  toolDetailDialog.addEventListener(
+    "close",
+    () => {
+      if (fallbackUsed) return;
+      clearTimeout(fallback);
+      openAfterClose();
+    },
+    { once: true }
+  );
+
+  closeModal(toolDetailDialog);
 }
 
 function buildMediaBlock(tool) {
