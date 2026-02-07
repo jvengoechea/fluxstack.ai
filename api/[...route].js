@@ -3,7 +3,8 @@ import { query } from "../lib/db.js";
 const CATEGORY_KEYWORDS = {
   Writing: ["write", "copy", "content", "email", "blog", "script"],
   Research: ["research", "study", "learn", "compare", "analysis", "citation"],
-  Image: ["image", "photo", "logo", "design", "art", "thumbnail"],
+  Image: ["image", "photo", "art", "thumbnail", "illustration"],
+  Design: ["design", "ui", "ux", "brand", "branding", "prototype", "wireframe"],
   Video: ["video", "reel", "youtube", "edit", "motion", "clips"],
   Audio: ["voice", "audio", "podcast", "speech", "music", "narration"],
   Coding: ["code", "developer", "debug", "build", "app", "program"],
