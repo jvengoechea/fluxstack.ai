@@ -239,19 +239,32 @@ async function handleToolEnrich(req, res) {
     return sendJSON(res, 400, { error: "Invalid URL" });
   }
 
-  const html = await fetchHTML(parsed.toString());
-  const meta = extractMeta(parsed, html);
+  try {
+    const html = await fetchHTML(parsed.toString());
+    const meta = extractMeta(parsed, html);
 
-  return sendJSON(res, 200, {
-    ok: true,
-    enrichment: {
-      title: meta.title || null,
-      description: meta.description || null,
-      thumbnailUrl: meta.thumbnailUrl || null,
-      demoVideoUrl: meta.demoVideoUrl || null,
-      source: "open-graph",
-    },
-  });
+    return sendJSON(res, 200, {
+      ok: true,
+      enrichment: {
+        title: meta.title || parsed.hostname.replace(/^www\./, ""),
+        description: meta.description || null,
+        thumbnailUrl: meta.thumbnailUrl || `${parsed.origin}/favicon.ico`,
+        demoVideoUrl: meta.demoVideoUrl || null,
+        source: "open-graph",
+      },
+    });
+  } catch {
+    return sendJSON(res, 200, {
+      ok: true,
+      enrichment: {
+        title: parsed.hostname.replace(/^www\./, ""),
+        description: null,
+        thumbnailUrl: `${parsed.origin}/favicon.ico`,
+        demoVideoUrl: null,
+        source: "fallback",
+      },
+    });
+  }
 }
 
 async function handleVote(res, id) {
@@ -508,7 +521,8 @@ async function fetchHTML(url) {
       throw new Error(`Could not fetch URL (${response.status})`);
     }
 
-    return await response.text();
+    const html = await response.text();
+    return html.slice(0, 300000);
   } finally {
     clearTimeout(timeout);
   }
