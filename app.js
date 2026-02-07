@@ -75,6 +75,7 @@ function bindEvents() {
     const hasAccess = await ensureAdminAccess();
     if (!hasAccess) return;
     assistantOutput.textContent = "Admin mode enabled.";
+    await refreshTools();
   });
 
   submitForm.addEventListener("submit", async (event) => {
@@ -404,15 +405,21 @@ function openToolDetail(tool) {
 }
 
 function openEditToolDialog(tool) {
-  editToolForm.elements.id.value = tool.id;
-  editToolForm.elements.name.value = tool.name || "";
-  editToolForm.elements.url.value = tool.url || "";
-  editToolForm.elements.category.value = tool.category || "Productivity";
-  editToolForm.elements.description.value = tool.description || "";
-  editToolForm.elements.votes.value = String(tool.votes ?? 0);
-  editToolForm.elements.thumbnailUrl.value = tool.thumbnailUrl || "";
-  editToolForm.elements.demoVideoUrl.value = tool.demoVideoUrl || "";
-  return openModal(editToolDialog);
+  try {
+    setFormValue(editToolForm, "id", tool.id);
+    setFormValue(editToolForm, "name", tool.name || "");
+    setFormValue(editToolForm, "url", tool.url || "");
+    setFormValue(editToolForm, "category", tool.category || "Productivity");
+    setFormValue(editToolForm, "description", tool.description || "");
+    setFormValue(editToolForm, "votes", String(tool.votes ?? 0));
+    setFormValue(editToolForm, "thumbnailUrl", tool.thumbnailUrl || "");
+    setFormValue(editToolForm, "demoVideoUrl", tool.demoVideoUrl || "");
+    return openModal(editToolDialog);
+  } catch (error) {
+    console.error(error);
+    assistantOutput.textContent = "Edit form failed to open. Please refresh and try again.";
+    return false;
+  }
 }
 
 function openEditFromDetail(tool) {
@@ -600,6 +607,12 @@ function openAdminPanel() {
 function closeAdminPanel() {
   adminPanel.classList.add("hidden");
   toggleAdmin.textContent = "Admin Queue";
+}
+
+function setFormValue(form, name, value) {
+  const field = form.elements.namedItem(name);
+  if (!field) return;
+  field.value = value;
 }
 
 function openModal(dialog) {
