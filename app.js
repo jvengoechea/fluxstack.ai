@@ -366,7 +366,8 @@ function openToolDetail(tool) {
   if (editBtn) {
     editBtn.addEventListener("click", () => {
       closeModal(toolDetailDialog);
-      openEditToolDialog(tool);
+      // Defer opening the next modal to avoid same-tick dialog state conflicts.
+      setTimeout(() => openEditToolDialog(tool), 0);
     });
   }
 
@@ -567,8 +568,13 @@ function closeAdminPanel() {
 function openModal(dialog) {
   if (!dialog) return false;
   if (typeof dialog.showModal === "function") {
-    dialog.showModal();
-    return true;
+    try {
+      dialog.showModal();
+      return true;
+    } catch {
+      dialog.setAttribute("open", "open");
+      return true;
+    }
   }
   dialog.setAttribute("open", "open");
   return true;
