@@ -332,12 +332,21 @@ button:hover {
 }
 
 .tags span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
+  min-height: 24px;
+  max-width: 116px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.76rem;
   color: #9ec6ff;
   background: rgba(74, 167, 255, 0.12);
   border: 1px solid rgba(74, 167, 255, 0.25);
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 4px 9px;
 }
 
 .card-actions {
@@ -350,6 +359,19 @@ button:hover {
 .card-actions a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.card-action-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(149, 182, 214, 0.35);
+  background: rgba(15, 31, 49, 0.8);
+  padding: 6px 10px;
 }
 
 .card-actions a,

@@ -288,6 +288,7 @@ function renderTools() {
   state.tools.forEach((tool) => {
     const card = document.createElement("article");
     card.className = "tool-card";
+    const adminEditBtn = state.adminToken ? `<button class="edit-btn">Edit</button>` : "";
 
     const thumbnail = tool.thumbnailUrl
       ? `<img class="tool-thumb" src="${escapeHTML(tool.thumbnailUrl)}" alt="${escapeHTML(tool.name)} preview" loading="lazy" />`
@@ -303,7 +304,10 @@ function renderTools() {
       <div class="tags">${tool.tags.map((tag) => `<span>#${escapeHTML(tag)}</span>`).join("")}</div>
       <div class="card-actions">
         <a href="${escapeHTML(tool.url)}" target="_blank" rel="noreferrer">Visit</a>
-        <button class="vote-btn" data-id="${tool.id}">▲ ${tool.votes}</button>
+        <div class="card-action-right">
+          ${adminEditBtn}
+          <button class="vote-btn" data-id="${tool.id}">▲ ${tool.votes}</button>
+        </div>
       </div>
     `;
 
@@ -320,6 +324,14 @@ function renderTools() {
         assistantOutput.textContent = error.message;
       }
     });
+
+    const editBtn = card.querySelector(".edit-btn");
+    if (editBtn) {
+      editBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openEditToolDialog(tool);
+      });
+    }
 
     card.querySelector("a").addEventListener("click", (event) => {
       event.stopPropagation();
