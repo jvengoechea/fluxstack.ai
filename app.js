@@ -30,6 +30,7 @@ const editToolDialog = document.getElementById("editToolDialog");
 const editToolForm = document.getElementById("editToolForm");
 const closeEditTool = document.getElementById("closeEditTool");
 const autoFillEdit = document.getElementById("autoFillEdit");
+const resetEditVotes = document.getElementById("resetEditVotes");
 const toolDetailDialog = document.getElementById("toolDetailDialog");
 const toolDetailContent = document.getElementById("toolDetailContent");
 
@@ -181,6 +182,10 @@ function bindEvents() {
 
   autoFillEdit.addEventListener("click", async () => {
     await runAutoFill(editToolForm, autoFillEdit);
+  });
+
+  resetEditVotes.addEventListener("click", () => {
+    editToolForm.elements.votes.value = "0";
   });
 
   toolDetailDialog.addEventListener("click", (event) => {
@@ -397,6 +402,7 @@ function openEditToolDialog(tool) {
   editToolForm.elements.url.value = tool.url || "";
   editToolForm.elements.category.value = tool.category || "Productivity";
   editToolForm.elements.description.value = tool.description || "";
+  editToolForm.elements.votes.value = String(tool.votes ?? 0);
   editToolForm.elements.thumbnailUrl.value = tool.thumbnailUrl || "";
   editToolForm.elements.demoVideoUrl.value = tool.demoVideoUrl || "";
   openModal(editToolDialog);

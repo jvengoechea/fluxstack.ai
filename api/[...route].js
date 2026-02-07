@@ -165,6 +165,8 @@ async function handleToolUpdate(req, res, id) {
   const payload = await parseBody(req);
   const validationError = validateSubmission(payload);
   if (validationError) return sendJSON(res, 400, { error: validationError });
+  const votes = parseVotes(payload.votes);
+  if (votes === null) return sendJSON(res, 400, { error: "Invalid votes value" });
 
   const updated = await query(
     `update tools
@@ -174,7 +176,8 @@ async function handleToolUpdate(req, res, id) {
             description = $5,
             tags = $6,
             thumbnail_url = $7,
-            demo_video_url = $8
+            demo_video_url = $8,
+            votes = $9
       where id = $1
       returning id`,
     [
@@ -186,6 +189,7 @@ async function handleToolUpdate(req, res, id) {
       deriveTags(payload.description),
       normalizeOptionalUrl(payload.thumbnailUrl),
       normalizeOptionalUrl(payload.demoVideoUrl),
+      votes,
     ]
   );
 
@@ -483,6 +487,12 @@ function deriveTags(text) {
 function normalizeOptionalUrl(value) {
   const trimmed = String(value || "").trim();
   return trimmed || null;
+}
+
+function parseVotes(value) {
+  const num = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(num) || Number.isNaN(num) || num < 0) return null;
+  return num;
 }
 
 function isValidHttpUrl(value) {
