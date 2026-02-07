@@ -205,6 +205,11 @@ button:hover {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
   border-radius: 999px;
   padding: 7px 12px;
   border: 1px solid var(--line);
@@ -270,6 +275,7 @@ button:hover {
 .tool-top {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -278,11 +284,17 @@ button:hover {
 }
 
 .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
+  min-height: 28px;
   font-size: 0.76rem;
   color: #07131c;
   background: rgba(83, 214, 180, 0.92);
   border-radius: 999px;
-  padding: 4px 9px;
+  padding: 4px 10px;
   font-weight: 700;
 }
 
