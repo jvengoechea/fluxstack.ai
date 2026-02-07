@@ -678,7 +678,7 @@ function closeModal(dialog) {
 }
 
 function isEmbeddableVideo(url) {
-  return /youtube\.com|youtu\.be|vimeo\.com/i.test(url);
+  return /youtube\.com|youtu\.be|vimeo\.com|x\.com|twitter\.com/i.test(url);
 }
 
 function toEmbedUrl(url) {
@@ -698,6 +698,11 @@ function toEmbedUrl(url) {
     const parsed = new URL(url);
     const id = parsed.pathname.split("/").filter(Boolean).pop();
     return `https://player.vimeo.com/video/${id}`;
+  }
+
+  if (/(x\.com|twitter\.com)\/.+\/status\/\d+/i.test(url)) {
+    // Twitframe renders the official X embed inside an iframe.
+    return `https://twitframe.com/show?url=${encodeURIComponent(url)}`;
   }
 
   return url;
